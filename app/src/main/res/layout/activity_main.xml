@@ -1,19 +1,124 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!-- file: app/src/main/res/layout/activity_main.xml -->
+<!--
+This is the main layout for your application.
+- It uses a FrameLayout to stack views on top of each other.
+- The AuraFlowView (our custom canvas) is at the bottom.
+- The UI container for the timer is on top of that.
+- The ad_overlay is on the very top, initially hidden.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#000000"
     tools:context=".MainActivity">
 
-    <TextView
+    <!-- This is our custom drawing surface where the aura effect will be rendered. -->
+    <com.example.inkdream.AuraFlowView
+        android:id="@+id/auraFlowView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- A simple container for the UI elements at the top -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="24dp"
+        android:background="@drawable/timer_background"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/timerTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3:00"
+                android:textColor="#999999"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <CheckBox
+                android:id="@+id/randomizeCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:buttonTint="@android:color/white"
+                android:text="Randomise"
+                android:textColor="#999999" />
+        </LinearLayout>
+
+        <!-- NEW: SeekBar for controlling random particle speed -->
+        <SeekBar
+            android:id="@+id/speedSeekBar"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:max="200"
+            android:progress="100"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+    <!-- The "Ad" screen overlay. It's hidden by default (visibility="gone"). -->
+    <FrameLayout
+        android:id="@+id/ad_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="32dp"
+            android:background="@drawable/ad_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time for a break!"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Hope you enjoyed your moment of calm."
+                android:textColor="#CCCCCC"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/playAgainButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="#E91E63"
+                android:paddingHorizontal="32dp"
+                android:paddingVertical="16dp"
+                android:text="Play Again"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+
+    </FrameLayout>
+
+</FrameLayout>

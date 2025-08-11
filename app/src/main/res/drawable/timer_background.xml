@@ -1,0 +1,6 @@
+<!-- A simple background for the timer to make it look nice. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#33FFFFFF" />
+    <corners android:radius="100dp" />
+</shape>
