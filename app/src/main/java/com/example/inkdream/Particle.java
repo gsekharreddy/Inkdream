@@ -16,7 +16,8 @@ import java.util.Random;
  */
 public class Particle {
 	private float x, y;
-	private float size;
+	private float baseSize; // The original size of the particle
+	private float currentSize; // The size after being affected by music
 	private float speedX, speedY;
 	private int alpha;
 	private final int decay;
@@ -24,16 +25,14 @@ public class Particle {
 	private final Paint paint;
 	private final Random random = new Random();
 
-	// --- MODIFIED: New constructor to accept audio magnitude ---
-	public Particle(float x, float y, int initialHue, float speedMultiplier, float audioMagnitude) {
+	// --- MODIFIED: Constructor no longer takes audioMagnitude ---
+	public Particle(float x, float y, int initialHue, float speedMultiplier) {
 		this.x = x;
 		this.y = y;
 		this.hue = initialHue;
 
-		// --- MODIFIED: Particle size now reacts to audio ---
-		// Base size + a bonus based on the current sound level
-		float sizeBonus = audioMagnitude * 5; // Adjust this multiplier to change sensitivity
-		this.size = random.nextFloat() * 40 + 30 + sizeBonus;
+		this.baseSize = random.nextFloat() * 40 + 30;
+		this.currentSize = baseSize; // Initially, current size is the same as base size
 
 		this.speedX = (random.nextFloat() * 1.0f - 0.5f) * speedMultiplier;
 		this.speedY = (random.nextFloat() * 1.0f - 0.5f) * speedMultiplier;
@@ -45,7 +44,8 @@ public class Particle {
 		this.paint.setStyle(Paint.Style.FILL);
 	}
 
-	public boolean update() {
+	// --- MODIFIED: Update method now takes audioMagnitude ---
+	public boolean update(float audioMagnitude) {
 		// Update position
 		this.x += this.speedX;
 		this.y += this.speedY;
@@ -53,6 +53,10 @@ public class Particle {
 		// Add a slight wobble for a more organic path
 		this.speedX += random.nextFloat() * 0.2f - 0.1f;
 		this.speedY += random.nextFloat() * 0.2f - 0.1f;
+
+		// --- NEW: Update the particle's size based on the music ---
+		float sizeBonus = audioMagnitude * 5;
+		this.currentSize = baseSize + sizeBonus;
 
 		// Fade out the particle
 		this.alpha -= this.decay;
@@ -69,12 +73,12 @@ public class Particle {
 		int edgeColor = Color.TRANSPARENT;
 
 		RadialGradient gradient = new RadialGradient(
-				x, y, size,
+				x, y, currentSize, // Use the current (music-affected) size
 				centerColor, edgeColor,
 				Shader.TileMode.CLAMP
 		);
 
 		paint.setShader(gradient);
-		canvas.drawCircle(x, y, size, paint);
+		canvas.drawCircle(x, y, currentSize, paint);
 	}
 }

@@ -1,11 +1,4 @@
 <!-- file: app/src/main/res/layout/activity_main.xml -->
-<!--
-This is the main layout for your application.
-- It uses a FrameLayout to stack views on top of each other.
-- The AuraFlowView (our custom canvas) is at the bottom.
-- The UI container for the timer is on top of that.
-- The ad_overlay is on the very top, initially hidden.
--->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -54,9 +47,20 @@ This is the main layout for your application.
                 android:buttonTint="@android:color/white"
                 android:text="Randomise"
                 android:textColor="#999999" />
+
+            <!-- NEW: Checkbox for music visualization -->
+            <CheckBox
+                android:id="@+id/musicCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:buttonTint="@android:color/white"
+                android:text="Music"
+                android:textColor="#999999" />
+
         </LinearLayout>
 
-        <!-- NEW: SeekBar for controlling random particle speed -->
+        <!-- SeekBar for controlling random particle speed -->
         <SeekBar
             android:id="@+id/speedSeekBar"
             android:layout_width="200dp"
@@ -69,7 +73,7 @@ This is the main layout for your application.
 
     </LinearLayout>
 
-    <!-- The "Ad" screen overlay. It's hidden by default (visibility="gone"). -->
+    <!-- The "Ad" screen overlay -->
     <FrameLayout
         android:id="@+id/ad_overlay"
         android:layout_width="match_parent"

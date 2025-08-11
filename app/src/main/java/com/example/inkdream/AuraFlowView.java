@@ -48,7 +48,8 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 	private float randomSpeedMultiplier = 1.0f;
 	private final Random random = new Random();
 
-	// --- NEW: Fields for audio visualization ---
+	// --- Fields for audio visualization ---
+	private volatile boolean isMusicMode = false;
 	private Visualizer visualizer;
 	private byte[] fftBytes;
 	private float audioMagnitude = 0f;
@@ -68,11 +69,10 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		paintForBitmap.setAntiAlias(true);
 	}
 
-	// --- NEW: Method to set up the Visualizer ---
 	private void setupVisualizer() {
 		try {
-			visualizer = new Visualizer(0); // 0 = system-wide audio output
-			visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[0]); // Use the smallest capture size
+			visualizer = new Visualizer(0);
+			visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[0]);
 
 			visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
 				@Override
@@ -82,10 +82,9 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 
 				@Override
 				public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
-					// This gives us the frequency data of the audio
 					fftBytes = fft;
 				}
-			}, Visualizer.getMaxCaptureRate() / 2, false, true); // Waveform false, FFT true
+			}, Visualizer.getMaxCaptureRate() / 2, false, true);
 
 			visualizer.setEnabled(true);
 		} catch (Exception e) {
@@ -130,15 +129,15 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 	private void updateAndDraw() {
 		if (offscreenCanvas == null) return;
 
-		// --- NEW: Update audio magnitude from FFT data ---
-		if (fftBytes != null) {
+		// Process audio first to get the current magnitude for this frame.
+		if (isMusicMode && fftBytes != null) {
 			float currentMagnitude = 0;
-			for (int i = 2; i < fftBytes.length; i += 2) { // Skip the DC component
-				// Calculate magnitude of the complex number
+			for (int i = 2; i < fftBytes.length; i += 2) {
 				currentMagnitude += Math.hypot(fftBytes[i], fftBytes[i + 1]);
 			}
-			// Smoothly update the magnitude value
 			audioMagnitude = (audioMagnitude * 0.8f) + ((currentMagnitude / fftBytes.length) * 0.2f);
+		} else {
+			audioMagnitude *= 0.9f;
 		}
 
 
@@ -150,7 +149,8 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 				float randomY = random.nextFloat() * getHeight();
 				int burst = 2;
 				for (int i = 0; i < burst; i++) {
-					particles.add(new Particle(randomX, randomY, hue, randomSpeedMultiplier, audioMagnitude));
+					// We no longer pass audioMagnitude to the constructor
+					particles.add(new Particle(randomX, randomY, hue, randomSpeedMultiplier));
 				}
 			}
 		}
@@ -158,7 +158,8 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		synchronized (particles) {
 			for (int i = particles.size() - 1; i >= 0; i--) {
 				Particle p = particles.get(i);
-				if (p.update()) {
+				// --- MODIFIED: Pass the current audio magnitude to the update method ---
+				if (p.update(audioMagnitude)) {
 					p.draw(offscreenCanvas);
 				} else {
 					particles.remove(i);
@@ -177,6 +178,16 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		this.randomSpeedMultiplier = progress / 100.0f;
 	}
 
+	public void setMusicMode(boolean isMusic) {
+		this.isMusicMode = isMusic;
+		if (isMusicMode) {
+			setupVisualizer();
+		} else if (visualizer != null) {
+			visualizer.release();
+			visualizer = null;
+		}
+	}
+
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		int action = event.getActionMasked();
@@ -186,8 +197,8 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		switch (action) {
 			case MotionEvent.ACTION_DOWN:
 			case MotionEvent.ACTION_POINTER_DOWN:
-				// --- MODIFIED: Pass audio magnitude to touch particles ---
-				particles.add(new Particle(event.getX(pointerIndex), event.getY(pointerIndex), hue, 1.0f, audioMagnitude));
+				// We no longer pass audioMagnitude to the constructor
+				particles.add(new Particle(event.getX(pointerIndex), event.getY(pointerIndex), hue, 1.0f));
 				lastTouchPoints.put(pointerId, new PointF(event.getX(pointerIndex), event.getY(pointerIndex)));
 				break;
 
@@ -206,8 +217,8 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 						for (float j = 0; j < distance; j += particleSpacing) {
 							float interpolatedX = lastPoint.x + (dx * (j / distance));
 							float interpolatedY = lastPoint.y + (dy * (j / distance));
-							// --- MODIFIED: Pass audio magnitude to touch particles ---
-							particles.add(new Particle(interpolatedX, interpolatedY, hue, 1.0f, audioMagnitude));
+							// We no longer pass audioMagnitude to the constructor
+							particles.add(new Particle(interpolatedX, interpolatedY, hue, 1.0f));
 						}
 					}
 					lastTouchPoints.put(id, currentPoint);
@@ -236,16 +247,15 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		}
 	}
 
-	@Override
 	public void resume() {
 		isRunning = true;
 		drawingThread = new Thread(this);
 		drawingThread.start();
-		// --- NEW: Start the visualizer ---
-		setupVisualizer();
+		if (isMusicMode) {
+			setupVisualizer();
+		}
 	}
 
-	@Override
 	public void pause() {
 		isRunning = false;
 		try {
@@ -255,7 +265,6 @@ public class AuraFlowView extends SurfaceView implements SurfaceHolder.Callback,
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		// --- NEW: Release the visualizer ---
 		if (visualizer != null) {
 			visualizer.release();
 			visualizer = null;

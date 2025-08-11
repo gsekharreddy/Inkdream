@@ -2,6 +2,8 @@
 // Make sure the package name matches your project's package name.
 package com.example.inkdream;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
@@ -11,8 +13,12 @@ import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.Locale;
 
@@ -22,7 +28,8 @@ import java.util.Locale;
  */
 public class MainActivity extends AppCompatActivity {
 
-	private static final long PLAY_TIME_MILLIS = 180 * 1000; // 3 minutes
+	private static final long PLAY_TIME_MILLIS = 180 * 1000;
+	private static final int AUDIO_PERMISSION_REQUEST_CODE = 101;
 
 	private AuraFlowView auraFlowView;
 	private TextView timerTextView;
@@ -30,9 +37,10 @@ public class MainActivity extends AppCompatActivity {
 	private Button playAgainButton;
 	private CountDownTimer countDownTimer;
 	private CheckBox randomizeCheckbox;
-
-	// --- NEW: Reference to the SeekBar ---
 	private SeekBar speedSeekBar;
+
+	// --- NEW: Reference to the Music CheckBox ---
+	private CheckBox musicCheckbox;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -52,49 +60,53 @@ public class MainActivity extends AppCompatActivity {
 		adOverlay = findViewById(R.id.ad_overlay);
 		playAgainButton = findViewById(R.id.playAgainButton);
 		randomizeCheckbox = findViewById(R.id.randomizeCheckbox);
-
-		// --- NEW: Find the SeekBar ---
 		speedSeekBar = findViewById(R.id.speedSeekBar);
 
-		// --- NEW: Logic for showing/hiding the SeekBar ---
-		randomizeCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				auraFlowView.setRandomMode(isChecked);
-				if (isChecked) {
-					speedSeekBar.setVisibility(View.VISIBLE);
-				} else {
-					speedSeekBar.setVisibility(View.GONE);
-				}
-			}
+		// --- NEW: Find the Music CheckBox ---
+		musicCheckbox = findViewById(R.id.musicCheckbox);
+
+		setupListeners();
+		startSession();
+	}
+
+	private void setupListeners() {
+		randomizeCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+			auraFlowView.setRandomMode(isChecked);
+			speedSeekBar.setVisibility(isChecked ? View.VISIBLE : View.GONE);
 		});
 
-		// --- NEW: Listener for when the SeekBar value changes ---
 		speedSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-				// The progress value is 0-200. We'll convert this to a multiplier in AuraFlowView.
 				auraFlowView.setRandomSpeedMultiplier(progress);
 			}
-
 			@Override
-			public void onStartTrackingTouch(SeekBar seekBar) {
-				// Not needed
-			}
-
+			public void onStartTrackingTouch(SeekBar seekBar) {}
 			@Override
-			public void onStopTrackingTouch(SeekBar seekBar) {
-				// Not needed
-			}
+			public void onStopTrackingTouch(SeekBar seekBar) {}
 		});
 
+		// --- NEW: Logic for the Music CheckBox ---
+		musicCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+			if (isChecked) {
+				// User wants to enable music mode, check for permission first.
+				if (checkAudioPermission()) {
+					auraFlowView.setMusicMode(true);
+				} else {
+					// If permission not granted, uncheck the box and request permission.
+					buttonView.setChecked(false);
+					requestAudioPermission();
+				}
+			} else {
+				// User wants to disable music mode.
+				auraFlowView.setMusicMode(false);
+			}
+		});
 
 		playAgainButton.setOnClickListener(v -> {
 			adOverlay.setVisibility(View.GONE);
 			startSession();
 		});
-
-		startSession();
 	}
 
 	private void startSession() {
@@ -121,6 +133,29 @@ public class MainActivity extends AppCompatActivity {
 
 		auraFlowView.resume();
 	}
+
+	private boolean checkAudioPermission() {
+		return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+	}
+
+	private void requestAudioPermission() {
+		ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_PERMISSION_REQUEST_CODE);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		if (requestCode == AUDIO_PERMISSION_REQUEST_CODE) {
+			if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+				// Permission was granted, now we can check the box and enable the mode.
+				musicCheckbox.setChecked(true);
+				auraFlowView.setMusicMode(true);
+			} else {
+				Toast.makeText(this, "Audio permission is required for music visualization.", Toast.LENGTH_LONG).show();
+			}
+		}
+	}
+
 
 	@Override
 	protected void onResume() {
